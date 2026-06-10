@@ -83,11 +83,14 @@ function buildSignatureHtml(data, mode="export") {
   // Fixed white card: the signature always renders light, in every inbox,
   // because Outlook 365 cannot show a conditional dark variant in a pasted
   // signature. bgcolor attributes (added below) survive the editor's sanitizer.
-  const cardBg = '#ffffff';
+  // Outlook dark mode force-inverts PURE #ffffff backgrounds and #000000 text.
+  // Nudging one step off (near-white card, near-black text) slips past that
+  // detection so the card and text are left as authored.
+  const cardBg = '#fefefe';
   const cellBg = `background-color:${cardBg};`;
   const padY = '18px';
-  const textColor = '#000000';
-  const mutedText = '#000000';
+  const textColor = '#0a0a0a';
+  const mutedText = '#0a0a0a';
   const dividerColor = '#7a7a7a';
 
   const bodyStyle = `font-family:${BRAND_FONT}; color:${textColor}; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; background-color:${cardBg}; border-radius:14px; min-width:1180px;`;
