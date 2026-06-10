@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scarlet Knights Email Signature Builder</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Scarlet Knights Email Signature Builder</h1>
+      <p>Build a Rutgers / Scarlet Knights signature with Arial text, embedded base64 PNG logos, the SK.com tag, no signature background, and the divider before the office/email area and the SCARLETKNIGHTS.COM tag directly beneath that contact area.</p>
+    </div>
+    <div class="top-actions">
+      <button id="resetBtn" class="secondary" type="button">Reset</button>
+      <button id="downloadBtn" type="button">Download HTML</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel controls">
+      <h2>Template fields</h2>
+      <p class="hint">Edit the content below. The preview and export HTML update automatically.</p>
+
+      <fieldset>
+        <legend>Brand lockups</legend>
+        <div class="logo-summary">
+          <img id="logoThumb" src="skcom-normal.png" alt="SK.com tag preview" />
+          <div>
+            <p class="locked-field compact"><strong>Font:</strong> Arial <span>locked</span></p>
+            <p class="locked-field compact"><strong>Main Outlook tag:</strong> sk.com normal as base64 PNG <span>locked</span></p>
+            <p class="locked-field compact"><strong>Dark-mode tag:</strong> sk.com dark as base64 PNG <span>locked</span></p>
+            <p class="locked-field compact"><strong>Block R max size:</strong> 76px wide × 62px tall <span>locked</span></p>
+            <label class="checkbox-row"><input id="previewDarkMode" type="checkbox" /> Preview dark mode</label>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Person</legend>
+        <label>Full name
+          <input id="fullName" value="First Name Last Name" />
+        </label>
+        <label>Title line 1
+          <input id="titleOne" value="Your Title Goes Right Here" />
+        </label>
+        <label>Title line 2
+          <input id="titleTwo" value="Your Title Goes Right Here Too" />
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Address</legend>
+        <p class="locked-field"><strong>Header:</strong> Address <span>locked</span></p>
+        <label>Address line 1
+          <input id="addressOne" value="201 Fitch Rd" />
+        </label>
+        <label>Address line 2
+          <input id="addressTwo" value="Piscataway, NJ 08854" />
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Contact</legend>
+        <label>Phone
+          <input id="phone" value="000-000-0000" />
+        </label>
+        <label>Email
+          <input id="email" type="email" value="email@scarletknights.com" />
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Spacing</legend>
+        <label>Extra section gap
+          <input id="sectionGap" type="number" value="0" min="-10" max="40" />
+        </label>
+        <p class="hint small">Customization is intentionally limited so signatures stay consistent for IT deployment.</p>
+      </fieldset>
+    </section>
+
+    <section class="workspace">
+      <section class="panel preview-panel">
+        <div class="panel-title">
+          <h2>Live preview</h2>
+          <button id="copyRenderedBtn" type="button" class="secondary">Copy rendered signature</button>
+        </div>
+        <div id="signatureStage" class="signature-stage">
+          <div id="signaturePreview" class="signature-preview" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="panel export-panel">
+        <div class="panel-title">
+          <div>
+            <h2>Export</h2>
+            <p class="hint">Copy the responsive HTML into Outlook, Gmail, Apple Mail, or an admin deployment tool. The exported layout stays horizontal to match the approved reference.</p>
+          </div>
+          <button id="copyHtmlBtn" type="button">Copy HTML</button>
+        </div>
+        <textarea id="htmlOutput" spellcheck="false" readonly></textarea>
+        <div class="panel-title plain-title">
+          <h3>Plain text fallback</h3>
+          <button id="copyTextBtn" class="secondary" type="button">Copy text</button>
+        </div>
+        <textarea id="plainOutput" class="plain-output" spellcheck="false" readonly></textarea>
+        <p class="hint small">Exported HTML uses Arial only, a base64 PNG Block R, the supplied SK.com tag as base64 PNG for normal Outlook, a dark-mode SK.com tag as base64 PNG, and no signature background container.</p>
+        <p id="status" class="status" role="status"></p>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
