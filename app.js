@@ -55,17 +55,17 @@ function buildPlainText(data) {
     "SCARLETKNIGHTS.COM"
   ].filter(Boolean).join("\n");
 }
-function buildRBlock(s, forceDark=false) {
+// Single fixed logo. Email signatures pasted into Outlook 365 cannot swap
+// images by color scheme (no JS, <style> is stripped on paste, and Outlook
+// ignores prefers-color-scheme), so we always ship the light-background logo
+// to match the fixed white card.
+function buildRBlock(s) {
   const shared = `width:${s.logoW}px; max-width:${s.logoW}px; height:auto; max-height:${s.logoH}px; border:0; outline:none; text-decoration:none; display:block;`;
-  if (forceDark) return `<img src="${DARK_LOGO_PNG_DATA_URI}" width="${s.logoW}" alt="Rutgers R" style="${shared}">`;
-  return `<img class="ru-logo-light" src="${LIGHT_LOGO_PNG_DATA_URI}" width="${s.logoW}" alt="Rutgers R" style="${shared}">` +
-         `<img class="ru-logo-dark" src="${DARK_LOGO_PNG_DATA_URI}" width="${s.logoW}" alt="Rutgers R" style="${shared} display:none;">`;
+  return `<img src="${LIGHT_LOGO_PNG_DATA_URI}" width="${s.logoW}" alt="Rutgers R" style="${shared}">`;
 }
-function buildTagBlock(s, forceDark=false) {
+function buildTagBlock(s) {
   const shared = `width:${s.tagW}px; max-width:100%; height:auto; border:0; outline:none; text-decoration:none; display:block;`;
-  if (forceDark) return `<img src="${DARK_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared}">`;
-  return `<img class="sk-tag-light" src="${MAIN_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared}">` +
-         `<img class="sk-tag-dark" src="${DARK_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared} display:none;">`;
+  return `<img src="${MAIN_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared}">`;
 }
 function line(value, style) {
   return value ? `<div style="${style}">${escapeHtml(value)}</div>` : "";
@@ -80,14 +80,17 @@ function buildSignatureHtml(data, mode="export") {
   const dividerPadLeft = Math.max(24, 34 + Math.floor(gapAdjust / 2));
   const dividerPadRight = Math.max(22, 32 + Math.floor(gapAdjust / 2));
 
-  const forceDarkPreview = mode === 'preview' && data.previewDarkMode;
-  const isDark = forceDarkPreview;
+  // Fixed white card: the signature always renders light, in every inbox,
+  // because Outlook 365 cannot show a conditional dark variant in a pasted
+  // signature. bgcolor attributes (added below) survive the editor's sanitizer.
+  const cardBg = '#ffffff';
+  const cellBg = `background-color:${cardBg};`;
+  const padY = '18px';
+  const textColor = '#000000';
+  const mutedText = '#000000';
+  const dividerColor = '#7a7a7a';
 
-  const textColor = isDark ? '#ffffff' : '#000000';
-  const mutedText = isDark ? '#e5e7eb' : '#000000';
-  const dividerColor = isDark ? '#6b6b6b' : '#7a7a7a';
-
-  const bodyStyle = `font-family:${BRAND_FONT}; color:${textColor}; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; background:transparent; min-width:1180px;`;
+  const bodyStyle = `font-family:${BRAND_FONT}; color:${textColor}; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; background-color:${cardBg}; border-radius:14px; min-width:1180px;`;
   const nameStyle = `font-size:22px; line-height:1.08; font-weight:700; color:${textColor}; white-space:nowrap;`;
   const textStyle = `font-size:16px; line-height:1.22; font-weight:400; color:${mutedText}; white-space:nowrap;`;
   const headingStyle = `font-size:22px; line-height:1.08; font-weight:700; color:${textColor}; white-space:nowrap;`;
@@ -99,45 +102,32 @@ function buildSignatureHtml(data, mode="export") {
   const email = escapeHtml(data.email || '');
   const phone = escapeHtml(data.phone || '');
   const tel = escapeHtml(String(data.phone || '').replace(/[^+\d]/g, ''));
-  const rLogoHtml = buildRBlock(s, forceDarkPreview);
-  const tagHtml = buildTagBlock(s, forceDarkPreview);
+  const rLogoHtml = buildRBlock(s);
+  const tagHtml = buildTagBlock(s);
 
-  const darkModeCss = mode === 'export' ? `<style>
-@media (prefers-color-scheme: dark) {
-  .ru-logo-light, .sk-tag-light { display:none !important; }
-  .ru-logo-dark, .sk-tag-dark { display:block !important; }
-  .sk-signature .sk-text, .sk-signature .sk-text a { color:#ffffff !important; }
-  .sk-signature .sk-divider { background:#6b6b6b !important; }
-}
-@media (prefers-color-scheme: light), not all {
-  .ru-logo-light, .sk-tag-light { display:block !important; }
-  .ru-logo-dark, .sk-tag-dark { display:none !important; }
-}
-</style>` : '';
-
-  return `${darkModeCss}<table class="sk-signature" role="presentation" cellpadding="0" cellspacing="0" border="0" style="${bodyStyle}">
+  return `<table class="sk-signature" role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="${cardBg}" style="${bodyStyle}">
   <tr>
-    <td class="sk-logo-cell" style="vertical-align:middle; padding:0 ${gapLogo}px 0 0;">
+    <td class="sk-logo-cell" bgcolor="${cardBg}" style="${cellBg} vertical-align:middle; padding:${padY} ${gapLogo}px ${padY} 28px;">
       ${rLogoHtml}
     </td>
 
-    <td class="sk-text sk-info-cell" style="vertical-align:middle; padding:0 ${gapInfo}px 0 0;">
+    <td class="sk-text sk-info-cell" bgcolor="${cardBg}" style="${cellBg} vertical-align:middle; padding:${padY} ${gapInfo}px ${padY} 0;">
       ${line(data.fullName, nameStyle)}
       ${line(data.titleOne, textStyle)}
       ${line(data.titleTwo, textStyle)}
     </td>
 
-    <td class="sk-text sk-address-cell" style="vertical-align:middle; padding:0 ${gapAddress}px 0 0;">
+    <td class="sk-text sk-address-cell" bgcolor="${cardBg}" style="${cellBg} vertical-align:middle; padding:${padY} ${gapAddress}px ${padY} 0;">
       ${line(FIXED_ADDRESS_HEADING, headingStyle)}
       ${line(data.addressOne, metaStyle)}
       ${line(data.addressTwo, metaStyle)}
     </td>
 
-    <td class="sk-divider-cell" style="vertical-align:middle; padding:0 ${dividerPadRight}px 0 ${dividerPadLeft}px;">
+    <td class="sk-divider-cell" bgcolor="${cardBg}" style="${cellBg} vertical-align:middle; padding:${padY} ${dividerPadRight}px ${padY} ${dividerPadLeft}px;">
       <span class="sk-divider" style="${dividerStyle}"></span>
     </td>
 
-    <td class="sk-text sk-contact-cell" style="vertical-align:middle; padding:0;">
+    <td class="sk-text sk-contact-cell" bgcolor="${cardBg}" style="${cellBg} vertical-align:middle; padding:${padY} 28px ${padY} 0;">
       ${data.phone ? `<div style="${metaStyle}"><span style="${labelStyle}">O:</span>&nbsp; <a href="tel:${tel}" style="color:${mutedText}; text-decoration:none;">${phone}</a></div>` : ''}
       ${data.email ? `<div style="${metaStyle}"><span style="${labelStyle}">E:</span>&nbsp; <a href="mailto:${email}" style="color:${mutedText}; text-decoration:none;">${email}</a></div>` : ''}
       <div style="${tagWrapStyle}">${tagHtml}</div>
