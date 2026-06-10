@@ -55,17 +55,23 @@ function buildPlainText(data) {
     "SCARLETKNIGHTS.COM"
   ].filter(Boolean).join("\n");
 }
-// Single fixed logo. Email signatures pasted into Outlook 365 cannot swap
-// images by color scheme (no JS, <style> is stripped on paste, and Outlook
-// ignores prefers-color-scheme), so we always ship the light-background logo
-// to match the fixed white card.
-function buildRBlock(s) {
-  const shared = `width:${s.logoW}px; max-width:${s.logoW}px; height:auto; max-height:${s.logoH}px; border:0; outline:none; text-decoration:none; display:block;`;
-  return `<img src="${LIGHT_LOGO_PNG_DATA_URI}" width="${s.logoW}" alt="Rutgers R" style="${shared}">`;
+// Logo blocks. For preview we render a single chosen variant. For export we
+// stack light + dark and let a prefers-color-scheme @media query swap them
+// (works in Apple Mail / iOS Mail). Outlook strips the <style> on paste and
+// can't swap, so mso-hide:all keeps it showing only the light image.
+function buildRBlock(s, variant) {
+  const shared = `width:${s.logoW}px; max-width:${s.logoW}px; height:auto; max-height:${s.logoH}px; border:0; outline:none; text-decoration:none;`;
+  if (variant === 'light') return `<img src="${LIGHT_LOGO_PNG_DATA_URI}" width="${s.logoW}" alt="Rutgers R" style="${shared} display:block;">`;
+  if (variant === 'dark')  return `<img src="${DARK_LOGO_PNG_DATA_URI}" width="${s.logoW}" alt="Rutgers R" style="${shared} display:block;">`;
+  return `<img class="ru-logo-light" src="${LIGHT_LOGO_PNG_DATA_URI}" width="${s.logoW}" alt="Rutgers R" style="${shared} display:block;">` +
+         `<img class="ru-logo-dark" src="${DARK_LOGO_PNG_DATA_URI}" width="${s.logoW}" alt="Rutgers R" style="${shared} display:none; mso-hide:all;">`;
 }
-function buildTagBlock(s) {
-  const shared = `width:${s.tagW}px; max-width:100%; height:auto; border:0; outline:none; text-decoration:none; display:block;`;
-  return `<img src="${MAIN_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared}">`;
+function buildTagBlock(s, variant) {
+  const shared = `width:${s.tagW}px; max-width:100%; height:auto; border:0; outline:none; text-decoration:none;`;
+  if (variant === 'light') return `<img src="${MAIN_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared} display:block;">`;
+  if (variant === 'dark')  return `<img src="${DARK_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared} display:block;">`;
+  return `<img class="sk-tag-light" src="${MAIN_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared} display:block;">` +
+         `<img class="sk-tag-dark" src="${DARK_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared} display:none; mso-hide:all;">`;
 }
 function line(value, style) {
   return value ? `<div style="${style}">${escapeHtml(value)}</div>` : "";
@@ -80,20 +86,17 @@ function buildSignatureHtml(data, mode="export") {
   const dividerPadLeft = Math.max(24, 34 + Math.floor(gapAdjust / 2));
   const dividerPadRight = Math.max(22, 32 + Math.floor(gapAdjust / 2));
 
-  // Fixed white card: the signature always renders light, in every inbox,
-  // because Outlook 365 cannot show a conditional dark variant in a pasted
-  // signature. bgcolor attributes (added below) survive the editor's sanitizer.
-  // Outlook dark mode force-inverts PURE #ffffff backgrounds and #000000 text.
-  // Nudging one step off (near-white card, near-black text) slips past that
-  // detection so the card and text are left as authored.
-  const cardBg = '#fefefe';
-  const cellBg = `background-color:${cardBg};`;
-  const padY = '18px';
-  const textColor = '#0a0a0a';
-  const mutedText = '#0a0a0a';
-  const dividerColor = '#7a7a7a';
+  // No background: let each inbox show through. Outlook auto-inverts the text
+  // (black on light, white on dark) on its own. For clients that honor
+  // prefers-color-scheme (Apple Mail, iOS Mail) the <style> block below swaps
+  // the logo images and recolors text. Outlook strips that <style> on paste,
+  // so its logos won't swap, but the red R still reads on a dark background.
+  const isDarkPreview = mode === 'preview' && data.previewDarkMode;
+  const textColor = isDarkPreview ? '#ffffff' : '#000000';
+  const mutedText = isDarkPreview ? '#ffffff' : '#000000';
+  const dividerColor = isDarkPreview ? '#6b6b6b' : '#7a7a7a';
 
-  const bodyStyle = `font-family:${BRAND_FONT}; color:${textColor}; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; background-color:${cardBg}; border-radius:14px; min-width:1180px;`;
+  const bodyStyle = `font-family:${BRAND_FONT}; color:${textColor}; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; background:transparent; min-width:1180px;`;
   const nameStyle = `font-size:22px; line-height:1.08; font-weight:700; color:${textColor}; white-space:nowrap;`;
   const textStyle = `font-size:16px; line-height:1.22; font-weight:400; color:${mutedText}; white-space:nowrap;`;
   const headingStyle = `font-size:22px; line-height:1.08; font-weight:700; color:${textColor}; white-space:nowrap;`;
@@ -105,32 +108,43 @@ function buildSignatureHtml(data, mode="export") {
   const email = escapeHtml(data.email || '');
   const phone = escapeHtml(data.phone || '');
   const tel = escapeHtml(String(data.phone || '').replace(/[^+\d]/g, ''));
-  const rLogoHtml = buildRBlock(s);
-  const tagHtml = buildTagBlock(s);
+  const previewVariant = mode === 'preview' ? (isDarkPreview ? 'dark' : 'light') : undefined;
+  const rLogoHtml = buildRBlock(s, previewVariant);
+  const tagHtml = buildTagBlock(s, previewVariant);
 
-  return `<table class="sk-signature" role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="${cardBg}" style="${bodyStyle}">
+  const darkSwapCss = mode === 'export' ? `<style type="text/css">
+@media (prefers-color-scheme: dark) {
+  .ru-logo-light, .sk-tag-light { display:none !important; }
+  .ru-logo-dark, .sk-tag-dark { display:block !important; }
+  .sk-signature .sk-text, .sk-signature .sk-text * { color:#ffffff !important; }
+  .sk-signature .sk-divider { background-color:#6b6b6b !important; }
+}
+</style>
+` : '';
+
+  return `${darkSwapCss}<table class="sk-signature" role="presentation" cellpadding="0" cellspacing="0" border="0" style="${bodyStyle}">
   <tr>
-    <td class="sk-logo-cell" bgcolor="${cardBg}" style="${cellBg} vertical-align:middle; padding:${padY} ${gapLogo}px ${padY} 28px;">
+    <td class="sk-logo-cell" style="vertical-align:middle; padding:0 ${gapLogo}px 0 0;">
       ${rLogoHtml}
     </td>
 
-    <td class="sk-text sk-info-cell" bgcolor="${cardBg}" style="${cellBg} vertical-align:middle; padding:${padY} ${gapInfo}px ${padY} 0;">
+    <td class="sk-text sk-info-cell" style="vertical-align:middle; padding:0 ${gapInfo}px 0 0;">
       ${line(data.fullName, nameStyle)}
       ${line(data.titleOne, textStyle)}
       ${line(data.titleTwo, textStyle)}
     </td>
 
-    <td class="sk-text sk-address-cell" bgcolor="${cardBg}" style="${cellBg} vertical-align:middle; padding:${padY} ${gapAddress}px ${padY} 0;">
+    <td class="sk-text sk-address-cell" style="vertical-align:middle; padding:0 ${gapAddress}px 0 0;">
       ${line(FIXED_ADDRESS_HEADING, headingStyle)}
       ${line(data.addressOne, metaStyle)}
       ${line(data.addressTwo, metaStyle)}
     </td>
 
-    <td class="sk-divider-cell" bgcolor="${cardBg}" style="${cellBg} vertical-align:middle; padding:${padY} ${dividerPadRight}px ${padY} ${dividerPadLeft}px;">
+    <td class="sk-divider-cell" style="vertical-align:middle; padding:0 ${dividerPadRight}px 0 ${dividerPadLeft}px;">
       <span class="sk-divider" style="${dividerStyle}"></span>
     </td>
 
-    <td class="sk-text sk-contact-cell" bgcolor="${cardBg}" style="${cellBg} vertical-align:middle; padding:${padY} 28px ${padY} 0;">
+    <td class="sk-text sk-contact-cell" style="vertical-align:middle; padding:0;">
       ${data.phone ? `<div style="${metaStyle}"><span style="${labelStyle}">O:</span>&nbsp; <a href="tel:${tel}" style="color:${mutedText}; text-decoration:none;">${phone}</a></div>` : ''}
       ${data.email ? `<div style="${metaStyle}"><span style="${labelStyle}">E:</span>&nbsp; <a href="mailto:${email}" style="color:${mutedText}; text-decoration:none;">${email}</a></div>` : ''}
       <div style="${tagWrapStyle}">${tagHtml}</div>
