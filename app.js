@@ -73,8 +73,14 @@ function buildTagBlock(s, variant) {
   return `<img class="sk-tag-light" src="${MAIN_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared} display:block;">` +
          `<img class="sk-tag-dark" src="${DARK_TAG_PNG_DATA_URI}" width="${s.tagW}" alt="ScarletKnights.com" style="${shared} display:none; mso-hide:all;">`;
 }
+// Each text line is a table row, and stack() wraps rows in a nested
+// presentation table. Outlook's Word engine renders nested tables far more
+// reliably than stacked <div> blocks (margins / line-height are predictable).
 function line(value, style) {
-  return value ? `<div style="${style}">${escapeHtml(value)}</div>` : "";
+  return value ? `<tr><td style="${style}">${escapeHtml(value)}</td></tr>` : "";
+}
+function stack(rows) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">${rows}</table>`;
 }
 function buildSignatureHtml(data, mode="export") {
   const s = sizeSet();
@@ -97,12 +103,11 @@ function buildSignatureHtml(data, mode="export") {
   const dividerColor = isDarkPreview ? '#6b6b6b' : '#7a7a7a';
 
   const bodyStyle = `font-family:${BRAND_FONT}; color:${textColor}; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt; background:transparent; min-width:1180px;`;
-  const nameStyle = `font-size:22px; line-height:1.08; font-weight:700; color:${textColor}; white-space:nowrap;`;
-  const textStyle = `font-size:16px; line-height:1.22; font-weight:400; color:${mutedText}; white-space:nowrap;`;
-  const headingStyle = `font-size:22px; line-height:1.08; font-weight:700; color:${textColor}; white-space:nowrap;`;
-  const metaStyle = `font-size:16px; line-height:1.25; font-weight:400; color:${mutedText}; white-space:nowrap;`;
-  const labelStyle = `font-weight:700; font-size:22px; line-height:1; color:${textColor};`;
-  const dividerStyle = `width:1px; height:88px; background:${dividerColor}; display:block;`;
+  const nameStyle = `font-family:${BRAND_FONT}; font-size:22px; line-height:1.08; font-weight:700; color:${textColor}; white-space:nowrap;`;
+  const textStyle = `font-family:${BRAND_FONT}; font-size:16px; line-height:1.22; font-weight:400; color:${mutedText}; white-space:nowrap;`;
+  const headingStyle = `font-family:${BRAND_FONT}; font-size:22px; line-height:1.08; font-weight:700; color:${textColor}; white-space:nowrap;`;
+  const metaStyle = `font-family:${BRAND_FONT}; font-size:16px; line-height:1.25; font-weight:400; color:${mutedText}; white-space:nowrap;`;
+  const labelStyle = `font-family:${BRAND_FONT}; font-weight:700; font-size:22px; line-height:1; color:${textColor};`;
   const tagWrapStyle = `padding:8px 0 0 0;`;
 
   const email = escapeHtml(data.email || '');
@@ -129,25 +134,33 @@ function buildSignatureHtml(data, mode="export") {
     </td>
 
     <td class="sk-text sk-info-cell" style="vertical-align:middle; padding:0 ${gapInfo}px 0 0;">
-      ${line(data.fullName, nameStyle)}
-      ${line(data.titleOne, textStyle)}
-      ${line(data.titleTwo, textStyle)}
+      ${stack(
+        line(data.fullName, nameStyle) +
+        line(data.titleOne, textStyle) +
+        line(data.titleTwo, textStyle)
+      )}
     </td>
 
     <td class="sk-text sk-address-cell" style="vertical-align:middle; padding:0 ${gapAddress}px 0 0;">
-      ${line(FIXED_ADDRESS_HEADING, headingStyle)}
-      ${line(data.addressOne, metaStyle)}
-      ${line(data.addressTwo, metaStyle)}
+      ${stack(
+        line(FIXED_ADDRESS_HEADING, headingStyle) +
+        line(data.addressOne, metaStyle) +
+        line(data.addressTwo, metaStyle)
+      )}
     </td>
 
     <td class="sk-divider-cell" style="vertical-align:middle; padding:0 ${dividerPadRight}px 0 ${dividerPadLeft}px;">
-      <span class="sk-divider" style="${dividerStyle}"></span>
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td class="sk-divider" width="1" style="width:1px; height:88px; background:${dividerColor}; font-size:1px; line-height:1px;">&nbsp;</td>
+      </tr></table>
     </td>
 
     <td class="sk-text sk-contact-cell" style="vertical-align:middle; padding:0;">
-      ${data.phone ? `<div style="${metaStyle}"><span style="${labelStyle}">O:</span>&nbsp; <a href="tel:${tel}" style="color:${mutedText}; text-decoration:none;">${phone}</a></div>` : ''}
-      ${data.email ? `<div style="${metaStyle}"><span style="${labelStyle}">E:</span>&nbsp; <a href="mailto:${email}" style="color:${mutedText}; text-decoration:none;">${email}</a></div>` : ''}
-      <div style="${tagWrapStyle}">${tagHtml}</div>
+      ${stack(
+        (data.phone ? `<tr><td style="${metaStyle}"><span style="${labelStyle}">O:</span>&nbsp; <a href="tel:${tel}" style="color:${mutedText}; text-decoration:none;">${phone}</a></td></tr>` : '') +
+        (data.email ? `<tr><td style="${metaStyle}"><span style="${labelStyle}">E:</span>&nbsp; <a href="mailto:${email}" style="color:${mutedText}; text-decoration:none;">${email}</a></td></tr>` : '') +
+        `<tr><td style="${tagWrapStyle}">${tagHtml}</td></tr>`
+      )}
     </td>
   </tr>
 </table>`;
